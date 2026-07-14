@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the `.github` organisation-level repository for **keleo-labs**. On GitHub, `.github` repositories serve a special role: they host the organisation profile README (displayed on the org's GitHub page), default community health files (issue templates, contributing guidelines, code of conduct), and reusable workflow templates.
 
-The README.md here is the public-facing description of the Keleo project as a whole.
+`profile/README.md` is the public-facing description of the Keleo project as a whole, rendered on the organisation's GitHub page. The root `README.md` describes this repository itself.
 
 ## The Keleo Project
 
@@ -30,11 +30,11 @@ All sibling repos live under `../` relative to this repository (the local direct
 
 This repo contains no build system, tests, or application code. Changes are typically limited to:
 
-- Editing `README.md` (the organisation profile)
+- Editing `profile/README.md` (the organisation profile)
 - Adding or updating community health files (e.g., `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, issue/PR templates under `.github/`)
 - Adding reusable GitHub Actions workflow templates
 
-When editing the README, preserve the existing structure: problem statement, insight, approach (with the four-layer table), repository index, and getting started guide. The README serves as the entry point for anyone discovering Keleo, so clarity and accuracy of the repo descriptions matter.
+When editing the profile README, preserve the existing structure: problem statement, insight, approach (with the four-layer table), repository index, and getting started guide. The profile README serves as the entry point for anyone discovering Keleo, so clarity and accuracy of the repo descriptions matter.
 
 ## Cross-Repo Context
 
