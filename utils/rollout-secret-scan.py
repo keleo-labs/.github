@@ -31,6 +31,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 TEMPLATES = HERE / "templates"
 ORG = "keleo-labs"
+SELF = ".github"
 BRANCH = "chore/shared-secret-scan"
 
 # Destination path in the target repository -> template file here. The caller
@@ -142,9 +143,17 @@ def slug(repo: Path) -> str | None:
 
 
 def discover(root: Path) -> list[Path]:
-    """Sibling directories that are git repositories on the keleo-labs org."""
+    """Sibling directories that are git repositories on the keleo-labs org.
+
+    The organisation profile repository is excluded. It holds the reusable
+    workflow, so its own caller uses the local ./ path rather than
+    keleo-labs/.github/...@main, and rolling the template over it would
+    replace a working self-reference with one that cannot be tested before
+    merge. It is already wired up; there is nothing here for it.
+    """
     return [child for child in sorted(root.iterdir())
-            if (child / ".git").exists() and slug(child)]
+            if (child / ".git").exists()
+            and slug(child) not in (None, SELF)]
 
 
 def default_branch(repo: Path) -> str:
@@ -191,7 +200,12 @@ def propose(repo: Path, force: bool) -> tuple[str, str]:
         run(["git", "worktree", "add", "--quiet", "--detach", str(tree),
              f"origin/{base}"], cwd=repo)
         try:
-            run(["git", "switch", "--quiet", "-c", BRANCH], cwd=tree)
+            # -C, not -c: a previous run that failed after creating the branch
+            # leaves it behind in the repository even though its worktree is
+            # gone, and -c then refuses with "branch already exists" on every
+            # retry. The branch only ever holds this one generated commit, so
+            # resetting it is safe.
+            run(["git", "switch", "--quiet", "-C", BRANCH], cwd=tree)
             actions = plan(tree, force)
             written = apply(tree, actions)
             if not written:
@@ -215,6 +229,12 @@ def propose(repo: Path, force: bool) -> tuple[str, str]:
             return ("proposed" if proc.returncode == 0 else "pr failed"), url
         finally:
             run(["git", "worktree", "remove", "--force", str(tree)],
+                cwd=repo, check=False)
+            # Removing the worktree does not remove the branch it held, which
+            # would otherwise accumulate in `git branch` output of a
+            # repository nobody asked to have a local branch in. The pushed
+            # copy on origin is the one that matters.
+            run(["git", "branch", "--quiet", "-D", BRANCH],
                 cwd=repo, check=False)
 
 
@@ -263,7 +283,12 @@ def main() -> int:
         try:
             status, detail = propose(repo, args.force)
         except Exception as err:  # noqa: BLE001 - report and carry on
-            status, detail = "failed", str(err).splitlines()[0]
+            # The last line, not the first: the first is the command that was
+            # run, which you already know, and git puts the reason last. A
+            # push that fails here is usually a remote still on https with no
+            # credential helper, which `git remote set-url` to ssh resolves.
+            lines = [ln for ln in str(err).splitlines() if ln.strip()]
+            status, detail = "failed", lines[-1] if lines else str(err)
         if status in ("failed", "pr failed"):
             failed = True
         print(f"{repo.name:32} {status:10} {detail}")
